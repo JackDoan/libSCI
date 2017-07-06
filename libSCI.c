@@ -70,7 +70,7 @@ int sciQueueMessage(sciState_t* portHandle, char* msg, unsigned int length) {
 			portHandle->transmitting = 1; //!< set this buffer to be transmitted
 			portHandle->first.inUse = 2; //!< set this buffer as being transmitted (because it will be)
 			portHandle->port->SCIFFTX.bit.TXFFIENA = 1; //!< enable the TX FIFO interrupt for this port
-			portHandle->port->SCIFFTX.bit.TXFFINTCLR = 1;
+			//portHandle->port->SCIFFTX.bit.TXFFINTCLR = 1;
 		}
 	}
 	else if(portHandle->transmitting == 1) { //buffer one is transmitting
@@ -157,8 +157,9 @@ __interrupt void libSCI_TX_Handler(void) {
         port->SCIFFTX.bit.TXFFIENA = 0; //!< disable FIFO-empty interrupt. This will be re-enabled by sciQueueMessage()
     }
 	else {
-		//something bad, but non-critical has occured.
-		//todo something about it?
+		//something bad, but non-critical has occurred. This shouldn't ever execute, so if it does, halt.
+	    asm ("      ESTOP0");
+
 	}
 
     //ack the interrupt and return
@@ -264,7 +265,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 	port->SCICTL2.bit.TXINTENA = 1; //enable TX interrupt?
 	port->SCICTL2.bit.RXBKINTENA = 0; //no break-detection needed
 
-	port->SCICTL1.bit.SWRESET = 0; // Relinquish SCI from Reset
+	port->SCICTL1.bit.SWRESET = 1; // Relinquish SCI from Reset
 	//fifos:
 	//port->SCIFFTX.all = 0xE040;
 	port->SCIFFTX.bit.SCIFFENA = 1; //enable FIFO
@@ -272,13 +273,53 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 	port->SCIFFTX.bit.TXFIFORESET = 1; //dont reset this either
 	port->SCIFFTX.bit.TXFFIL = 1; //fire TX FIFO interrupt when the FIFO is almost empty
 	port->SCIFFTX.bit.TXFFIENA = 1; //enable TX FIFO interrupt
-	port->SCIFFRX.all = 0x2044;
+	//port->SCIFFRX.all = 0x2044;
+	port->SCIFFRX.bit.RXFIFORESET = 1; //come out of reset
+	port->SCIFFRX.bit.RXFFIL = 1; //interrupt when we have this many words available
+	port->SCIFFRX.bit.RXFFIENA = 0; //enable setting for RXFFIL
+
 	port->SCIFFCT.all = 0x0;
 		
-
-	
 	EDIS;
 	EINT;
 	return libSCI_handle;
 }
+
+void sciExpectRX(sciState_t* libport, int length) {
+    sciPort_t port = libport->port;
+    //we don't care about the contents of the RX buffer, just how much is in it.
+    port->SCIFFRX.bit.RXFFIL = length; //fire isr when this many bytes are here
+    port->SCIFFRX.bit.RXFFIENA = 1;    //enable isr
+    port->SCIFFRX.bit.RXFFINTCLR = 1;  //clear the interrupt latch so that new ISRs can fire
+}
+
+int sciRead(sciState_t* p) {
+    return p->port->SCIRXBUF.bit.SAR;
+}
+
+int sciAvailable(sciState_t* portHandle) {
+    return portHandle->port->SCIFFRX.bit.RXFFST;
+}
+/* the RX state machine
+ *
+ * State 0 / default: fire an ISR when a byte is rxed. If the byte marks the start of a packet:
+ *          move to state 1
+ *          return from ISR
+ *          else: return from ISR. This was an invalid byte.
+ * State 1: still single byte, but this will mark the length of the incoming packet. Save this to $length.
+ *          port->SCIFFRX.bit.RXFFIL = max($length, 14). If $length > 16, save $length-14 to $more
+ *          14 is chosen instead of 16 to 100% avoid overflows
+ *          advance to State 2
+ *          set a CPU timer for $timeout milliseconds. If this timer fires, return to state 0.
+ *          return from ISR
+ * State 2: copy the RX FIFO into a buffer, up to $length+$more, decrementing $more as appropriate
+ *          clear timer from State 1
+ *          if $more > 0, adjust RXFFIL and return to State 1
+ *          else, alert main() that there is a packet ready in buffer N and return to State 0
+ *          return from ISR
+ *
+ */
+
+
+
 
