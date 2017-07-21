@@ -111,6 +111,17 @@ __interrupt void libSCI_TX_Handler(void) {
 	sciState_t * sciState;
 	sciPort_t port;
 	int ack = 0;
+
+#ifdef CPU2
+	GpioDataRegs.GPBDAT.bit.GPIO60 = 1;
+	GpioDataRegs.GPADAT.bit.GPIO22 = 1;
+#endif
+#ifdef CPU1
+	GpioDataRegs.GPCDAT.bit.GPIO67 = 0;
+	GpioDataRegs.GPDDAT.bit.GPIO111 = 1;
+	GpioDataRegs.GPDDAT.bit.GPIO105 = 1;
+#endif
+
 	//logic to figure out which port fired this interrupt:
 	if((libSCI_handle.A.enabled) && (PieCtrlRegs.PIEACK.bit.ACK9) &&
 	  (libSCI_handle.A.port->SCIFFTX.bit.TXFFINT) ) {
@@ -174,6 +185,15 @@ __interrupt void libSCI_TX_Handler(void) {
     default:
         break;
     }
+#ifdef CPU2
+    GpioDataRegs.GPBDAT.bit.GPIO60 = 0;
+    GpioDataRegs.GPADAT.bit.GPIO22 = 0;
+#endif
+#ifdef CPU1
+    GpioDataRegs.GPCDAT.bit.GPIO67 = 0;
+    GpioDataRegs.GPDDAT.bit.GPIO111 = 0;
+    GpioDataRegs.GPDDAT.bit.GPIO105 = 0;
+#endif
 }
 
 
@@ -297,7 +317,7 @@ int sciRead(sciState_t* p) {
     return p->port->SCIRXBUF.bit.SAR;
 }
 
-int sciAvailable(sciState_t* portHandle) {
+int sciAvailable(sciState_t* portHandle) { //returns number of bytes in the rx buffer
     return portHandle->port->SCIFFRX.bit.RXFFST;
 }
 /* the RX state machine
