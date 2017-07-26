@@ -276,7 +276,10 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
         port->SCIHBAUD.all = 0x0000;
         port->SCILBAUD.all = 0x0036;
         break;
-
+        case LIBSCI_230400:
+            port->SCIHBAUD.all = 0x0000;
+            port->SCILBAUD.all = 0x001B;
+            break;
         default:
         //do an error thing
         break;

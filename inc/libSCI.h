@@ -1,10 +1,10 @@
 #ifndef LIBSCI_H_
 #define LIBSCI_H_
 
-#define LIBSCI_BUFFER_LEN 50
+#define LIBSCI_BUFFER_LEN 200
 
 //enums:
-typedef enum libSCI_baudrate_enum { LIBSCI_115200, LIBSCI_9600 } libSCI_baudrate_t;
+typedef enum libSCI_baudrate_enum { LIBSCI_230400, LIBSCI_115200, LIBSCI_9600 } libSCI_baudrate_t;
 typedef enum libSCI_port_enum { A, B, C, D } libSCI_port_t;
 //end enums
 
