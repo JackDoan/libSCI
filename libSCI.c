@@ -13,97 +13,34 @@
  *	enough such that one can finish, and a second one can be ready before a third one is queued.
  *	As such, there isn't a real queue table.
  *
- *      
- *
- *
  */
  
 #include "inc/libSCI.h"
 #include "inc_private/libSCI_private.h"
+#include "inc/ioBuffer.h"
 
 libSCI_handle_t libSCI_handle;
 
-int sciCheckMsgLength(int len) {
-	if(len <= LIBSCI_BUFFER_LEN)
-		return 1;
-	else
-		return 0;
-}
-
-int sciEnqueue(libSCI_buffer_t* bufHandle, char* msg, int length) {
-	int toReturn = 0;
-	if(bufHandle->inUse == 0) { //buffer is available
-		if(!sciCheckMsgLength(length)) {
-			length = LIBSCI_BUFFER_LEN;
-			toReturn = -2; //!< only the first LIBSCI_BUFFER_LEN bytes of your message were queued. Advance your pointer and try again.
-		}
-		else {
-			toReturn = 1; //!< message queued successfully
-		}
-		bufHandle->length = length;
-		bufHandle->progress = 0;
-		memcpy( &(bufHandle->buffer), msg, length ); //!< copy the message into the buffer
-		bufHandle->inUse = 1; //!<order here is CRITICAL! don't mark the buffer in use until it's ready, in case we get interrupted!
-	}
-	else {
-		toReturn = -3; //!< both message buffers were full
-	}
-	return toReturn;
-}
-
 int sciQueueMessage(sciState_t* portHandle, char* msg, unsigned int length) {
-	int i = 0;
 	int toReturn = 0;
 	if(portHandle->enabled != 1) {
 		return -1; //!< error! this port isn't enabled.
 	}
-	if(portHandle->transmitting == 0) { //the port is idle
-		//EDGE CASE: 
-		if(length < 0x10) { //if the message is less than the width of our currently idle FIFO
-			for(i = 0; i < length; i++) { //just put the bytes on the damn port
-				portHandle->port->SCITXBUF.bit.TXDT = msg[i];
-			}
-			toReturn = 0; //!< message sent and not queued
-		}
-		else {
-			sciEnqueue( &(portHandle->first), msg, length );
-			portHandle->transmitting = 1; //!< set this buffer to be transmitted
-			portHandle->first.inUse = 2; //!< set this buffer as being transmitted (because it will be)
-			portHandle->port->SCIFFTX.bit.TXFFIENA = 1; //!< enable the TX FIFO interrupt for this port
-			//portHandle->port->SCIFFTX.bit.TXFFINTCLR = 1;
-		}
-	}
-	else if(portHandle->transmitting == 1) { //buffer one is transmitting
-		toReturn = sciEnqueue( &(portHandle->second), msg, length ); //therefore, enqueue on two
-	}
-	else if(portHandle->transmitting == 2) { //second buffer is transmitting
-		toReturn = sciEnqueue( &(portHandle->first), msg, length ); //therefore, enqueue on one
-	}
-	else {
-	    asm ("      ESTOP0"); //something bad has happened
-	}
-	return toReturn;
+    toReturn = (int)iobuf_enqueue( (&(portHandle->iobuf), msg, length);
+	portHandle->port->SCIFFTX.bit.TXFFIENA = 1;
+    return toReturn;
 }
 
-static void sciProcessBuffer(sciState_t * sciState, sciPort_t port, libSCI_buffer_t * toTX, libSCI_buffer_t * other) {
+static void sciProcessBuffer(sciState_t * sciState) {
 	//now that we've established that we have work to do, let's get some bytes into that FIFO:
-    while( 	(toTX->progress < toTX->length) && //!<we've sent fewer bytes than the length of the frame
+    sciPort_t port = sciState->port;
+    iobuf_service_reply_t contents = iobuf_service(sciState->iobuf);
+
+    while( 	(contents.status == IOBUF_SERVICE_GOOD) && //while there are bytes in the buffers 
 			(port->SCIFFTX.bit.TXFFST != 0x10) ) { //!<AND we haven't filled the FIFO,   
         //!<upper byte of the int is masked out because we can't send it & bytes are 16 bits on this godforsaken platform
-        port->SCITXBUF.bit.TXDT = ( (toTX->buffer)[toTX->progress] & 0x00FF); //!< send the byte:
-        toTX->progress++; //!< mark the byte sent
-    }
-    if(toTX->progress == toTX->length) { //!< if we're done with this frame,
-		toTX->inUse = 0; //!< mark it completed:
-		if(other->inUse == 1) { //check to see if the second buffer needs to be transmitted:
-			if(sciState->transmitting == 1) 		{ sciState->transmitting = 2; } //do a buffer swap
-			else if(sciState->transmitting == 2) 	{ sciState->transmitting = 1; }
-			other->inUse = 2;
-		}
-		else {
-			sciState->transmitting = 0;
-		}
-        
+        port->SCITXBUF.bit.TXDT = ( contents.data & 0x00FF ); //!< send the byte:
+        contents = iobuf_service(sciState->iobuf);
     }
 }
 
@@ -111,16 +48,6 @@ __interrupt void libSCI_TX_Handler(void) {
 	sciState_t * sciState;
 	sciPort_t port;
 	int ack = 0;
-
-#ifdef CPU2
-	GpioDataRegs.GPBDAT.bit.GPIO60 = 1;
-	GpioDataRegs.GPADAT.bit.GPIO22 = 1;
-#endif
-#ifdef CPU1
-	GpioDataRegs.GPCDAT.bit.GPIO67 = 0;
-	GpioDataRegs.GPDDAT.bit.GPIO111 = 1;
-	GpioDataRegs.GPDDAT.bit.GPIO105 = 1;
-#endif
 
 	//logic to figure out which port fired this interrupt:
 	if((libSCI_handle.A.enabled) && (PieCtrlRegs.PIEACK.bit.ACK9) &&
@@ -147,31 +74,20 @@ __interrupt void libSCI_TX_Handler(void) {
 		        ack = 8;
 	}
 	else {
-		//this interrupt was called without any ports enabled. What the fuck?
+		//this interrupt was called without any ports enabled.
 	    asm ("      ESTOP0");
 	}
 	port = sciState->port;
 	//end port finding logic
 	
     //is a transmission in progress?
-	if(sciState->transmitting == 1) {
-		sciProcessBuffer(sciState, port, &(sciState->first), &(sciState->second) );
-	}
-	else if(sciState->transmitting == 2) {
-		sciProcessBuffer(sciState, port, &(sciState->second), &(sciState->first) );
-	}
+	sciProcessBuffer(sciState);
 	//we aren't sending anything right now
-    else if( (sciState->first.inUse == 0) && (sciState->second.inUse == 0) ) {
+    if( (sciState->transmitting == -1)) {
         //there is legitimately nothing to do.
         //we need to do something to keep this interrupt from firing
-		sciState->transmitting = 0; //!< mark that we aren't transmitting anything, just in case.
         port->SCIFFTX.bit.TXFFIENA = 0; //!< disable FIFO-empty interrupt. This will be re-enabled by sciQueueMessage()
     }
-	else {
-		//something bad, but non-critical has occurred. This shouldn't ever execute, so if it does, halt.
-	    asm ("      ESTOP0");
-
-	}
 
     //ack the interrupt and return
     port->SCIFFTX.bit.TXFFINTCLR = 1; //!< ack the interrupt at the peripheral level
@@ -185,15 +101,6 @@ __interrupt void libSCI_TX_Handler(void) {
     default:
         break;
     }
-#ifdef CPU2
-    GpioDataRegs.GPBDAT.bit.GPIO60 = 0;
-    GpioDataRegs.GPADAT.bit.GPIO22 = 0;
-#endif
-#ifdef CPU1
-    GpioDataRegs.GPCDAT.bit.GPIO67 = 0;
-    GpioDataRegs.GPDDAT.bit.GPIO111 = 0;
-    GpioDataRegs.GPDDAT.bit.GPIO105 = 0;
-#endif
 }
 
 
@@ -202,17 +109,16 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 	DINT;
 	EALLOW;
 	sciPort_t port;
-	switch(libport) {
+	sciState_t* sciState;
+    
+    switch(libport) {
 		case A:
 		PieVectTable.SCIA_TX_INT = &libSCI_TX_Handler; //!< add our interrupt to the table
 		CpuSysRegs.PCLKCR7.bit.SCI_A = 1; //!< SCIA clock enable
 		PieCtrlRegs.PIEIER9.bit.INTx2 = 1; //!< SCIA_TX is on INT9.2
 		IER |= M_INT9; //!< M_INT9 = SCIA_RX/TX and SCIB_RX/TX
+        sciState = libSCI_handle.A;
 		port = &SciaRegs;
-		libSCI_handle.A.enabled = 1;
-		libSCI_handle.A.first.inUse = 0; //!< set buffers to empty
-		libSCI_handle.A.second.inUse = 0;
-		libSCI_handle.A.port = port;
 		break;
 		
 		case B:
@@ -221,10 +127,6 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		PieCtrlRegs.PIEIER9.bit.INTx4 = 1; //!< SCIB_TX is on INT9.4
 		IER |= M_INT9; //!< M_INT9 = SCIA_RX/TX and SCIB_RX/TX
 		port = &SciaRegs;
-		libSCI_handle.B.enabled = 1;
-		libSCI_handle.B.first.inUse = 0; //!< set buffers to empty
-		libSCI_handle.B.second.inUse = 0;
-		libSCI_handle.B.port = port;
 		break;
 		
 		case C:
@@ -233,10 +135,6 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		PieCtrlRegs.PIEIER8.bit.INTx6 = 1; //!< SCIC_TX is on INT8.6
 		IER |= M_INT8; //!< M_INT8 = SCIC_RX/TX and SCID_RX/TX
 		port = &SciaRegs;
-		libSCI_handle.C.enabled = 1;
-		libSCI_handle.C.first.inUse = 0; //!< set buffers to empty
-		libSCI_handle.C.second.inUse = 0;
-		libSCI_handle.C.port = port;
 		break;
 		
 		case D:
@@ -245,10 +143,6 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		PieCtrlRegs.PIEIER8.bit.INTx8 = 1; //!< SCIC_TX is on INT8.8
 		IER |= M_INT8; //!< M_INT8 = SCIC_RX/TX and SCID_RX/TX
 		port = &SciaRegs;
-		libSCI_handle.D.enabled = 1;
-		libSCI_handle.D.first.inUse = 0; //!< set buffers to empty
-		libSCI_handle.D.second.inUse = 0;
-		libSCI_handle.D.port = port;
 		break;
 	
 		default:
@@ -256,7 +150,13 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		break;
 	}
 	DELAY_US(100); //!<delay here. Fucking pipelines.	
-	//port->SCICCR.all = 0x0007;
+	
+    sciState->enabled = 1;
+    sciState->port = port; 
+    iobuf_init(sciState->iobuf);
+
+
+    //port->SCICCR.all = 0x0007;
 	port->SCICCR.bit.STOPBITS = 0; // 1 stop bit,
 	port->SCICCR.bit.PARITYENA = 0; // No parity
 	port->SCICCR.bit.LOOPBKENA = 0; //No loopback

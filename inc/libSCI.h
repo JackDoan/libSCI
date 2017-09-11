@@ -2,6 +2,7 @@
 #define LIBSCI_H_
 
 #define LIBSCI_BUFFER_LEN 200
+#include "inc/ioBuffer.h"
 
 //enums:
 typedef enum libSCI_baudrate_enum { LIBSCI_230400, LIBSCI_115200, LIBSCI_9600 } libSCI_baudrate_t;
@@ -14,19 +15,10 @@ typedef volatile struct SCI_REGS * sciPort_t;
 
 //structs:
 
-typedef struct libsci_buffer_struct { //!< two of these per SCI state machine
-    char buffer[LIBSCI_BUFFER_LEN];
-    int length; //!< length of message
-    int progress; //!< how many bytes have already been sent?
-    int inUse; //!< are we done? 0=ready to accept new message. 1=ready to tx. 2=being txed
-} libSCI_buffer_t;
-
 typedef struct sciStateMachine_struct { //!< and one of these per port
     sciPort_t port;
     int enabled;
-    int transmitting; //!< which buffer is transmitting? zero for idle
-    libSCI_buffer_t first;
-    libSCI_buffer_t second;
+    iobuf_handle iobuf;
 } sciState_t;
 
 typedef struct libSCI_handle_struct { //!< one of these exists per CPU
