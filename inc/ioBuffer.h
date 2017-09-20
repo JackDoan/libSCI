@@ -7,6 +7,8 @@
  * for outgoing messages such that they can be sent by multiple threads without mutual exclusion problems.
  *
  */
+#ifndef IOBUF_H_
+#define IOBUF_H_
 
 #include <string.h>
 
@@ -48,3 +50,5 @@ typedef struct iobuf_handle_struct {
 int iobuf_enqueue(iobuf_handle* handle, char* msg, int length);
 iobuf_service_reply_t iobuf_service(iobuf_handle* handle);
 void iobuf_init(iobuf_handle* handle);
+
+#endif

@@ -2,7 +2,7 @@
 #define LIBSCI_H_
 
 #define LIBSCI_BUFFER_LEN 200
-#include "inc/ioBuffer.h"
+#include "ioBuffer.h"
 
 //enums:
 typedef enum libSCI_baudrate_enum { LIBSCI_230400, LIBSCI_115200, LIBSCI_9600 } libSCI_baudrate_t;

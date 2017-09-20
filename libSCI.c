@@ -26,7 +26,7 @@ int sciQueueMessage(sciState_t* portHandle, char* msg, unsigned int length) {
 	if(portHandle->enabled != 1) {
 		return -1; //!< error! this port isn't enabled.
 	}
-    toReturn = (int)iobuf_enqueue( (&(portHandle->iobuf), msg, length);
+    toReturn = (int)iobuf_enqueue( &(portHandle->iobuf), msg, length);
 	portHandle->port->SCIFFTX.bit.TXFFIENA = 1;
     return toReturn;
 }
@@ -34,13 +34,13 @@ int sciQueueMessage(sciState_t* portHandle, char* msg, unsigned int length) {
 static void sciProcessBuffer(sciState_t * sciState) {
 	//now that we've established that we have work to do, let's get some bytes into that FIFO:
     sciPort_t port = sciState->port;
-    iobuf_service_reply_t contents = iobuf_service(sciState->iobuf);
+    iobuf_service_reply_t contents = iobuf_service( &(sciState->iobuf) );
 
     while( 	(contents.status == IOBUF_SERVICE_GOOD) && //while there are bytes in the buffers 
 			(port->SCIFFTX.bit.TXFFST != 0x10) ) { //!<AND we haven't filled the FIFO,   
         //!<upper byte of the int is masked out because we can't send it & bytes are 16 bits on this godforsaken platform
         port->SCITXBUF.bit.TXDT = ( contents.data & 0x00FF ); //!< send the byte:
-        contents = iobuf_service(sciState->iobuf);
+        contents = iobuf_service(&(sciState->iobuf));
     }
 }
 
@@ -83,7 +83,7 @@ __interrupt void libSCI_TX_Handler(void) {
     //is a transmission in progress?
 	sciProcessBuffer(sciState);
 	//we aren't sending anything right now
-    if( (sciState->transmitting == -1)) {
+    if( (sciState->iobuf.transmitting == -1)) {
         //there is legitimately nothing to do.
         //we need to do something to keep this interrupt from firing
         port->SCIFFTX.bit.TXFFIENA = 0; //!< disable FIFO-empty interrupt. This will be re-enabled by sciQueueMessage()
@@ -117,7 +117,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		CpuSysRegs.PCLKCR7.bit.SCI_A = 1; //!< SCIA clock enable
 		PieCtrlRegs.PIEIER9.bit.INTx2 = 1; //!< SCIA_TX is on INT9.2
 		IER |= M_INT9; //!< M_INT9 = SCIA_RX/TX and SCIB_RX/TX
-        sciState = libSCI_handle.A;
+        sciState = &(libSCI_handle.A);
 		port = &SciaRegs;
 		break;
 		
@@ -126,7 +126,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		CpuSysRegs.PCLKCR7.bit.SCI_B = 1; //!< SCIB clock enable
 		PieCtrlRegs.PIEIER9.bit.INTx4 = 1; //!< SCIB_TX is on INT9.4
 		IER |= M_INT9; //!< M_INT9 = SCIA_RX/TX and SCIB_RX/TX
-		port = &SciaRegs;
+		port = &ScibRegs;
 		break;
 		
 		case C:
@@ -134,7 +134,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		CpuSysRegs.PCLKCR7.bit.SCI_C = 1; //!< SCIC clock enable
 		PieCtrlRegs.PIEIER8.bit.INTx6 = 1; //!< SCIC_TX is on INT8.6
 		IER |= M_INT8; //!< M_INT8 = SCIC_RX/TX and SCID_RX/TX
-		port = &SciaRegs;
+		port = &ScicRegs;
 		break;
 		
 		case D:
@@ -142,7 +142,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 		CpuSysRegs.PCLKCR7.bit.SCI_D = 1; //!< SCIC clock enable
 		PieCtrlRegs.PIEIER8.bit.INTx8 = 1; //!< SCIC_TX is on INT8.8
 		IER |= M_INT8; //!< M_INT8 = SCIC_RX/TX and SCID_RX/TX
-		port = &SciaRegs;
+		port = &ScidRegs;
 		break;
 	
 		default:
@@ -153,7 +153,7 @@ libSCI_handle_t libSCI_init(libSCI_port_t libport, libSCI_baudrate_t baudrate) {
 	
     sciState->enabled = 1;
     sciState->port = port; 
-    iobuf_init(sciState->iobuf);
+    iobuf_init(&(sciState->iobuf));
 
 
     //port->SCICCR.all = 0x0007;
