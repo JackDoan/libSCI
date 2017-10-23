@@ -105,8 +105,8 @@ int iobuf_enqueue(iobuf_handle* handle, char* msg, int length) {
 
     if(handle->transmitting == -1) { //the port is idle
         handle->transmitting = 0; //we'll use the first storage unit then
+        toReturn = iobuf_place_into_storage( &(handle->storage[0]), msg, length );
         handle->storage[0].status = IOBUF_STORAGE_PROCESSING;
-        iobuf_place_into_storage( &(handle->storage[0]), msg, length );
         //*(handle->hw_ISR_enable) = 1;  //this is handled in a layer up
         //!< enable the TX FIFO interrupt for this port
     }
