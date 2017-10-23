@@ -36,12 +36,14 @@ static void sciProcessBuffer(sciState_t * sciState) {
     sciPort_t port = sciState->port;
     iobuf_service_reply_t contents = iobuf_service( &(sciState->iobuf) );
 
-    while( 	(contents.status == IOBUF_SERVICE_GOOD) && //while there are bytes in the buffers 
-			(port->SCIFFTX.bit.TXFFST >= (0x10-1)) ) { //!<AND we haven't filled the FIFO,
-        //using 0x10-1 because if we use 0x10 sometimes we grab a byte but we're out of room in the FIFO
-        //!<upper byte of the int is masked out because we can't send it & bytes are 16 bits on this godforsaken platform
-        port->SCITXBUF.bit.TXDT = ( contents.data & 0x00FF ); //!< send the byte:
-        contents = iobuf_service(&(sciState->iobuf));
+    while(contents.status == IOBUF_SERVICE_GOOD) { //while there are bytes in the buffers
+        port->SCITXBUF.bit.TXDT = contents.data; //!< send the byte:
+        if(port->SCIFFTX.bit.TXFFST < 0x10) { //don't get more unless there's room in the fifo
+            contents = iobuf_service(&(sciState->iobuf));
+        }
+        else {
+            break;
+        }
     }
 }
 

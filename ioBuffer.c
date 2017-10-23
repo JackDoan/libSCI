@@ -49,12 +49,31 @@ static char iobuf_extract_byte(iobuf_storage_t* storage) {
      */
     char toReturn = 0; 
     //todo: should we check that we've sent fewer bytes than the length of the frame?
-    toReturn = ( (storage->buffer)[storage->progress] & 0x00FF); //send the byte:
+    toReturn = ( (storage->buffer)[storage->progress] ); //send the byte:
     storage->progress++; //mark the byte sent
     return toReturn;
 }
 
+/*
+//returns a pointer internal to the iobuf, and a legal amount of bytes to read
+iobuf_mass_reply_t iobuf_mass_read(iobuf_handle* handle, int desiredLen) {
+    iobuf_mass_reply_t toReturn;
+    iobuf_storage_t* storage;
+    if( (handle->transmitting > -1) && (handle->transmitting < IOBUF_NUM_STORAGE) ){ //someone is txing
+        storage = &( handle->storage[handle->transmitting] );
+        int remaining = storage->length - storage->progress;
+        if(remaining <= desiredLen) {
+            //we need to rotate the storage, since we either exactly finished it or came back short
 
+        }
+    }
+    else {
+        //there is nothing to do
+        toReturn.status = IOBUF_SERVICE_NONE;
+        toReturn.data = 0;
+    }
+}
+*/
 iobuf_service_reply_t iobuf_service(iobuf_handle* handle) {
     iobuf_service_reply_t toReturn;
     iobuf_storage_t* storage;

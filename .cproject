@@ -45,15 +45,17 @@
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.DIAG_WRAP.403475181" name="Wrap diagnostic messages (--diag_wrap)" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.DIAG_WRAP" value="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.DIAG_WRAP.off" valueType="enumerated"/>
 								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.DISPLAY_ERROR_NUMBER.1302288327" name="Emit diagnostic identifier numbers (--display_error_number, -pden)" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.DISPLAY_ERROR_NUMBER" value="true" valueType="boolean"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.ADVICE__PERFORMANCE.360365549" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.ADVICE__PERFORMANCE" value="--advice:performance=all" valueType="string"/>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT.1845849371" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT" value="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT.C99" valueType="enumerated"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.ADVICE__PERFORMANCE.360365549" name="Provide advice on optimization techniques (--advice:performance)" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.ADVICE__PERFORMANCE" value="--advice:performance=all" valueType="string"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT.1845849371" name="C Dialect" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT" value="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.C_DIALECT.C99" valueType="enumerated"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.OPT_FOR_SPEED.1972895686" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.OPT_FOR_SPEED" value="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.OPT_FOR_SPEED.2" valueType="enumerated"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.FP_MODE.241310580" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.FP_MODE" value="com.ti.ccstudio.buildDefinitions.C2000_17.6.compilerID.FP_MODE.relaxed" valueType="enumerated"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__C_SRCS.1156554059" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__C_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__CPP_SRCS.1523320426" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__CPP_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__ASM_SRCS.252407161" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__ASM_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__ASM2_SRCS.714052411" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.compiler.inputType__ASM2_SRCS"/>
 							</tool>
 							<tool id="com.ti.ccstudio.buildDefinitions.C2000_17.6.library.librarianDebug.1785109950" name="C2000 Archiver" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.library.librarianDebug">
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.archiverID.OUTPUT_FILE.1912424246" name="Output file" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.archiverID.OUTPUT_FILE" value="&quot;${ProjName}.lib&quot;" valueType="string"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_17.6.archiverID.OUTPUT_FILE.1912424246" name="Output file" superClass="com.ti.ccstudio.buildDefinitions.C2000_17.6.archiverID.OUTPUT_FILE" useByScannerDiscovery="false" value="${ProjName}.lib" valueType="string"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
@@ -112,7 +114,7 @@
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_16.9.compiler.inputType__ASM2_SRCS.157341077" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_16.9.compiler.inputType__ASM2_SRCS"/>
 							</tool>
 							<tool id="com.ti.ccstudio.buildDefinitions.C2000_16.9.library.librarianRelease.1139722471" name="C2000 Archiver" superClass="com.ti.ccstudio.buildDefinitions.C2000_16.9.library.librarianRelease">
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_16.9.archiverID.OUTPUT_FILE.283716413" name="Output file" superClass="com.ti.ccstudio.buildDefinitions.C2000_16.9.archiverID.OUTPUT_FILE" useByScannerDiscovery="false" value="&quot;${ProjName}.lib&quot;" valueType="string"/>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_16.9.archiverID.OUTPUT_FILE.283716413" name="Output file" superClass="com.ti.ccstudio.buildDefinitions.C2000_16.9.archiverID.OUTPUT_FILE" useByScannerDiscovery="false" value="${ProjName}.lib" valueType="string"/>
 							</tool>
 						</toolChain>
 					</folderInfo>

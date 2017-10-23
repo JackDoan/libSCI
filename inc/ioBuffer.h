@@ -26,6 +26,13 @@ typedef struct iobuf_service_reply_struct {
     iobuf_service_status_t status;
     char data;
 } iobuf_service_reply_t;
+/*
+typedef struct iobuf_mass_reply_struct {
+    iobuf_service_status_t status;
+    int data_ptr;
+    int size;
+} iobuf_mass_reply_t;
+*/
 
 typedef enum iobuf_storage_status_enum {
     IOBUF_STORAGE_EMPTY,
@@ -48,6 +55,7 @@ typedef struct iobuf_handle_struct {
 
 
 int iobuf_enqueue(iobuf_handle* handle, char* msg, int length);
+//iobuf_mass_reply_t iobuf_mass_read(iobuf_handle* handle, int desiredLen)
 iobuf_service_reply_t iobuf_service(iobuf_handle* handle);
 void iobuf_init(iobuf_handle* handle);
 
